@@ -38,12 +38,6 @@ module.exports = function (Person) {
   };
 
   Person.beforeRemote('updateStatus', function(ctx, model, next) {
-    console.log("calling before remote");
-    console.log("@@@@@@@2222");
-    console.log(accessToken);
-    console.log("#############");
-    console.log(model);
-    console.log("$$$$$$$$$$$$$$");
     var accessToken = ctx.req.accessToken;
     if (accessToken) {
       ctx.req.body.subscriberId = accessToken.userId;
@@ -120,13 +114,31 @@ module.exports = function (Person) {
       }else{
         var message = "status update of " + personData.userName + "=" + personData.status;
         var publishers = resp;
-        
-        console.log("!!!!!!!!!!!!!!!");
-        console.log(publishers);
-        console.log(message);
-        io.on('connection', function(socket){
-          
-        });  
+        var users = {}; //User Connect
+        io.sockets.on('connection', function (socket) {
+          socket.emit('connected');
+          socket.on('session', function (session){
+
+            users[socket.id] = {userID:session, socketID:socket};
+            console.log(users);
+            socket.emit("session_established");
+
+            //User Disconnect
+            socket.on('disconnect', function (){
+              delete users[socket.id];
+              socket.broadcast.emit('disconnect', { data : session});
+            });
+            // mapping userid from sessions and from the mongo query and firing the notification
+            socket.on('statusUpdate', function (message, resp) {
+              for (var key in users){
+               for (var val in resp){
+                  if (users[key].userId==resp[val])
+                    users[key].emit('updateStatusnotification', { data: message});
+                }
+              }
+            });
+          });
+        });
       }
     });
   });
