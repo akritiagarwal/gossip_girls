@@ -1,4 +1,4 @@
-rypto = require("crypto")
+crypto = require("crypto")
   , _ = require('underscore')
 var loopback = require('loopback');
 var salt = "098%^&qwerty";
